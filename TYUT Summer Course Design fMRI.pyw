@@ -14,7 +14,7 @@ from openpyxl.styles import Alignment
 from openpyxl.utils.exceptions import InvalidFileException
 from PyQt6.QtCore import QObject, QRegularExpression, QThread, pyqtBoundSignal, pyqtSignal, Qt, pyqtSlot
 from PyQt6.QtGui import QCursor, QDoubleValidator, QIcon, QMouseEvent, QPixmap, QRegularExpressionValidator
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSystemTrayIcon, QVBoxLayout,QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPlainTextEdit, QProgressBar, QPushButton, QSystemTrayIcon, QVBoxLayout,QWidget
 
 os.chdir(os.path.split(os.path.realpath(__file__))[0])
 # 更改工作目录到脚本文件夹，使相对路径均以脚本文件夹为基准
@@ -605,7 +605,7 @@ class ProcessInfoEditor(QDialog):
             "selected_nodepath":self.selected_node_path_edit.text(),
             "selected_node_enabled":bool(self.selected_node_path_edit.text())
         }
-        if self.open_exists_edit.text()!="":
+        if self.open_exists_edit.text()!="" and os.path.isfile(self.open_exists_edit.text()):
             path=self.open_exists_edit.text()
         else:
             path,_=QFileDialog.getSaveFileName(caption="保存至",directory=os.path.split(os.path.realpath(__file__))[0],filter="处理信息文件(*.json)")
