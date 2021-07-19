@@ -127,11 +127,6 @@ class Processor(QObject):
                 self.logger.debug("皮尔逊系数目标值：%f，最少图片数：%d" %(target,overnum))
                 if target<=1 and target>=0 and overnum>0 and overnum<=len(files):
                     self.logger.debug("数据符合要求")
-                    if self.config["selected_node_enabled"]==True:
-                        with open(selected_nodes,"r",encoding="utf-8") as reader:
-                            selected_nodes_list=[int(nodestr) for nodestr in reader.readlines()]
-                    else:
-                        selected_nodes_list=[]
                     for file in files:
                         self.logger.info("正在处理文件 %s" %file)
                         try:
@@ -145,7 +140,6 @@ class Processor(QObject):
                                 self.logger.debug("解析文件 %s 成功，矩阵大小：(%d,%d)" %(file,matrix.shape[0],matrix.shape[1]))
                                 lines1=list()
                                 lines2=list()
-                                selected_result=numpy.zeros((len(selected_nodes_list),len(selected_nodes_list)),float)
                                 if file in results.sheetnames:
                                     sheet=results[file]
                                 else:
@@ -228,6 +222,8 @@ class Processor(QObject):
                                     node[idx]=matrix[nodesmap[nodeslst[idx[0]]]-1,nodesmap[nodeslst[idx[1]]]-1]
                                 numpy.savetxt(os.path.join(workdir,"Results",file+".edge"),node,fmt="%s",delimiter=self.config["split"],newline=self.config["newline"],encoding="utf-8")
                                 if self.config["selected_node_enabled"]==True:
+                                    selected_nodes_list=numpy.loadtxt(selected_nodes,int)
+                                    selected_result=numpy.zeros((len(selected_nodes_list),len(selected_nodes_list)),float)
                                     if selected_result.size==0:
                                         self.logger.warning("筛选结果矩阵大小为0")
                                     else:
