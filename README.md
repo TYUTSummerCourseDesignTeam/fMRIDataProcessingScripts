@@ -58,7 +58,7 @@ brew install numpy pyqt
 
 Unfortunately, `matplotlib` and `openpyxl` are not included in brew Formula, so you have to install them manually through `pip install matplotlib openpyxl`.
 
-NOTE: Please avoid as possible useing `sudo` with `pip` as this option may add many files not managed by your system's package manager.
+NOTE: Please avoid as possible using `sudo` with `pip` as this option may add many files not managed by your system's package manager.
 
 ## Run the script
 
