@@ -12,7 +12,7 @@ In the processing of matrix data, with the increasing number of template nodes a
 
 1. Processing data matrix to realize data visualization. You can extract and filter the part above a certain value from the matrix, output a specific matrix image, and output the corresponding coordinates and names of the corresponding nodes to a specific table (this script is output to Excel).
 2. All object images are compared to output a specified matrix image with a certain number of repetitions as the standard.
-3. Import specified node coordinates, which can realize the original matrix data screening function, and output corresponding files (. Node and. Edge) according to Power264 matrix, which can be directly imported into BrainNet for use.
+3. Import specified node coordinates, which can realize the original matrix data screening function, and output corresponding files (. Node and. Edge) according to Power264 matrix (or other matrix template which satisfy the correct format in the editor's tooltip), which can be directly imported into BrainNet for use.
 4. Most of the generated files are MATLAB compatible, you can use them in MATLAB directly, incompatible files are used for human reading directly, you can open them easily with Excel or any image viewer you like. In fact, we use this script to genrate files to plot in MATLAB, it will be too effectiveless if we do it manually.
 
 ## How to use it?
