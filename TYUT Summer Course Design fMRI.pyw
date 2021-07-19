@@ -386,6 +386,7 @@ class SettingDialog(QDialog):
         self.m_flag=False
         self.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
 class ProcessInfoEditor(QDialog):
+    update_config_signal=pyqtSignal(dict)
     def __init__(self,parent:QWidget):
         super().__init__()
         self.m_flag=False
@@ -546,6 +547,10 @@ class ProcessInfoEditor(QDialog):
         selected_node_path_btn.clicked.connect(self.browse_selected_node)
         selected_node_path.addWidget(selected_node_path_btn)
         content.addLayout(selected_node_path,7,0)
+        self.apply=QCheckBox("保存并应用")
+        self.apply.setToolTip("保存的同时应用这个处理信息文件到脚本配置")
+        self.apply.setStyleSheet("QCheckBox::indicator{width:10px;height:10px;border:none;border-radius:5px;background:#9BE3DE;}QCheckBox::indicator:unchecked{background:#BEEBE9;}QCheckBox::indicator:unchecked:hover{background:#9AD3BC;}QCheckBox::indicator:checked{background:#95E1D3;}QCheckBox::indicator:checked:hover{background:#98DED9;}")
+        content.addWidget(self.apply,7,1)
         save=QPushButton("保存(&S)")
         save.setToolTip("保存当前配置")
         save.setFixedHeight(20)
@@ -615,6 +620,8 @@ class ProcessInfoEditor(QDialog):
             self.logger.info("已保存至 %s" %path)
             if self.open_exists_edit.text()=="":
                 self.open_exists_edit.setText(path)
+            if self.apply.isChecked()==True:
+                self.update_config_signal.emit({"process_info":path})
     def mousePressEvent(self, event:QMouseEvent):
         self.logger.debug("触发鼠标按压事件")
         super().mousePressEvent(event)
@@ -750,6 +757,12 @@ class UI(QMainWindow):
         }
         with open("config.json","w",encoding="utf-8") as writer:
             writer.write(json.dumps(default_config,sort_keys=True,indent=4,ensure_ascii=False))
+    @pyqtSlot(dict)
+    def update_config(self,config:dict):
+        self.conf.update(config)
+        with open("config.json","w",encoding="utf-8") as writer:
+            writer.write(json.dumps(self.conf,sort_keys=True,ensure_ascii=False,indent=4))
+        self.logger.debug("已更新配置文件并保存至磁盘")
     @pyqtSlot(QSystemTrayIcon.ActivationReason)
     def tray_activated(self,reason:QSystemTrayIcon.ActivationReason):
         if reason==QSystemTrayIcon.ActivationReason.DoubleClick:
@@ -801,13 +814,14 @@ class UI(QMainWindow):
         self.progress.setValue(0)
     def show_setting(self):
         setting=SettingDialog(self)
-        setting.update_config_signal.connect(self.conf.update)
+        setting.update_config_signal.connect(self.update_config)
         setting.resize(int(self.width()/1024*400),int(self.height()/768*150))
         setting.move(int(0.5*(self.width()-setting.width()))+self.pos().x(),int(0.5*(self.height()-setting.height()))+self.pos().y())
         setting.setStyleSheet("QDialog{background:#F3EAC2;border:none;border-radius:5px;}")
         setting.exec()
     def show_process_info_editor(self):
         editor=ProcessInfoEditor(self)
+        editor.update_config_signal.connect(self.update_config)
         editor.resize(int(self.width()/1024*600),int(self.height()/768*300))
         editor.move(int(0.5*(self.width()-editor.width()))+self.pos().x(),int(0.5*(self.height()-editor.height()))+self.pos().y())
         editor.setStyleSheet("QDialog{background:#F3EAC2;border:none;border-radius:5px;}")
