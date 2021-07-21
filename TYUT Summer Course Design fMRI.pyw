@@ -5,11 +5,13 @@ import json
 import time
 import numpy
 import base64
+import nibabel
 import logging
 import openpyxl
 import platform
 from matplotlib import pyplot as plt
 from matplotlib import use as matuse
+from nibabel.affines import apply_affine
 from openpyxl.styles import Alignment
 from openpyxl.utils.exceptions import InvalidFileException
 from PyQt6.QtCore import QObject, QRegularExpression, QThread, pyqtBoundSignal, pyqtSignal, Qt, pyqtSlot
@@ -143,7 +145,8 @@ class Processor(QObject):
                                 if file in results.sheetnames:
                                     sheet=results[file]
                                 else:
-                                    sheet=results.create_sheet(file)
+                                    sheet=results.active
+                                    sheet.title=file
                                 sheetmap={
                                     "A1":"x",
                                     "B1":"y",
@@ -246,9 +249,6 @@ class Processor(QObject):
                                 fig.savefig(os.path.join(workdir,"Results",file+".png"))
                                 plt.close(fig)
                             self.update_progress_signal.emit(int((files.index(file)+1)/len(file)*100))
-                    if "Sheet" in results.sheetnames and len(results.sheetnames)>1:
-                        results.remove(results["Sheet"])
-                        self.logger.debug("已删除Sheet表")
                     results.save(os.path.join(workdir,"Results","maps.xlsx"))
                     results.close()
                     self.logger.info("正在生成 %d 张图像的公共部分" %(len(datas)))
@@ -275,6 +275,30 @@ class Processor(QObject):
                         self.logger.info("处理过程中公共部分出现最多的点：%s，共出现 %d 次" %(max_pos,max_num))
                     else:
                         self.logger.info("未找到公共点")
+                    if self.config["nii_enabled"]==True:
+                        self.logger.info("正在生成nii文件中所有节点的值的列表")
+                        niiimg=nibabel.load(self.config["nii_path"])
+                        affine=niiimg.affine
+                        niidata=numpy.asanyarray(niiimg.dataobj)
+                        niiwb=openpyxl.Workbook()
+                        niisheet=niiwb.active
+                        niisheet.title="nii数据结果"
+                        chat_head={"A1":"x","B1":"y","C1":"z","D1":"nii文件中的值"}
+                        for key in chat_head.keys():
+                            niisheet[key]=chat_head[key]
+                            niisheet[key].alignment=center_style
+                        r=self.config["node_start"]
+                        for row in nodes.iter_rows(min_row=self.config["node_start"]):
+                            pos=[cell.value for cell in list(row)[1:4]]
+                            if any([p==None for p in pos]):
+                                break
+                            vpos=apply_affine(numpy.linalg.inv(affine),pos)
+                            val=niidata[round(vpos[0]),round(vpos[1]),round(vpos[2])]
+                            chatdata=pos
+                            chatdata.extend([val])
+                            niisheet.append(chatdata)
+                            r+=1
+                        niiwb.save(os.path.join(workdir,"Results","nii_values.xlsx"))
                     mins,secs=divmod(time.time()-start_time,60)
                     hrs,mins=divmod(mins,60)
                     self.logger.info("所有任务执行完成，共计用时 %02d:%02d:%02d" %(hrs,mins,secs))
@@ -547,10 +571,25 @@ class ProcessInfoEditor(QDialog):
         selected_node_path_btn.clicked.connect(self.browse_selected_node)
         selected_node_path.addWidget(selected_node_path_btn)
         content.addLayout(selected_node_path,7,0)
+        nii_path=QHBoxLayout()
+        nii_path_label=QLabel(".nii文件位置：")
+        nii_path_label.setStyleSheet("QLabel{background:transparent;border:none;}")
+        nii_path.addWidget(nii_path_label)
+        self.nii_path_edit=QLineEdit()
+        self.nii_path_edit.setToolTip("输出所有节点的值所需要的.nii文件的位置，留空则禁用此功能")
+        self.nii_path_edit.setStyleSheet("QLineEdit{border:1px solid #F3EAC2;border-radius:5px;background:transparent;}QLineEdit:hover{border:1px solid #F5B461;}")
+        nii_path.addWidget(self.nii_path_edit)
+        nii_path_btn=QPushButton("浏览")
+        nii_path_btn.setToolTip("浏览文件")
+        nii_path_btn.setFixedSize(40,20)
+        nii_path_btn.setStyleSheet("QPushButton{background:#9BE3DE;border:none;border-radius:5px}QPushButton:hover{background:#9AD3BC;}")
+        nii_path_btn.clicked.connect(self.browse_nii)
+        nii_path.addWidget(nii_path_btn)
+        content.addLayout(nii_path,8,0)
         self.apply=QCheckBox("保存并应用")
         self.apply.setToolTip("保存的同时应用这个处理信息文件到脚本配置")
         self.apply.setStyleSheet("QCheckBox::indicator{width:10px;height:10px;border:none;border-radius:5px;background:#9BE3DE;}QCheckBox::indicator:unchecked{background:#BEEBE9;}QCheckBox::indicator:unchecked:hover{background:#9AD3BC;}QCheckBox::indicator:checked{background:#95E1D3;}QCheckBox::indicator:checked:hover{background:#98DED9;}")
-        content.addWidget(self.apply,7,1)
+        content.addWidget(self.apply,8,1)
         save=QPushButton("保存(&S)")
         save.setToolTip("保存当前配置")
         save.setFixedHeight(20)
@@ -580,6 +619,7 @@ class ProcessInfoEditor(QDialog):
                     self.target_edit.setText(str(conf["target"]))
                     self.overnum_edit.setText(str(conf["overnum"]))
                     self.selected_node_path_edit.setText(conf["selected_nodepath"])
+                    self.nii_path_edit.setText(conf["nii_path"])
                 except Exception as e:
                     self.logger.debug("出错原因：%s" %e)
                     self.logger.warning("文件中存在错误，我们已经将错误部分恢复为默认值")
@@ -596,6 +636,10 @@ class ProcessInfoEditor(QDialog):
         file,_=QFileDialog.getOpenFileName(caption="选择节点列表",directory=os.path.split(os.path.realpath(__file__))[0],filter="csv格式节点信息(*.csv *.txt)")
         self.selected_node_path_edit.setText(file)
         self.logger.debug("获取到的文件信息：%s" %file)
+    def browse_nii(self):
+        file,_=QFileDialog.getOpenFileName(caption="选择.nii数据文件",directory=os.path.split(os.path.realpath(__file__))[0],filter="数据文件(*.nii *.nii.gz)")
+        self.nii_path_edit.setText(file)
+        self.logger.debug("获取到的文件信息：%s" %file)
     def save(self):
         conf={
             "add_label":self.add_label_combo.currentData(),
@@ -608,7 +652,9 @@ class ProcessInfoEditor(QDialog):
             "target":float(self.target_edit.text()),
             "overnum":int(self.overnum_edit.text()),
             "selected_nodepath":self.selected_node_path_edit.text(),
-            "selected_node_enabled":bool(self.selected_node_path_edit.text())
+            "selected_node_enabled":bool(self.selected_node_path_edit.text()),
+            "nii_path":self.nii_path_edit.text(),
+            "nii_enabled":bool(self.nii_path_edit.text())
         }
         if self.open_exists_edit.text()!="" and os.path.isfile(self.open_exists_edit.text()):
             path=self.open_exists_edit.text()

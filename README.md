@@ -29,17 +29,19 @@ Ubuntu/Debian:
 
 ```shell
 
-sudo apt-get install -y python3-numpy python3-matplotlib python3-openpyxl
+sudo apt-get install -y python3-numpy python3-matplotlib python3-openpyxl 
 
 ```
 
-Unfortunately, there is no `python3-PyQt6` package for Ubuntu, so you have to install it from PyPi by executing `pip install PyQt6` in the terminal. If it have this package in the future, feel free to install throgh `apt-get`
+Unfortunately, there is no `python3-PyQt6` and `python3-nibabel` package for Ubuntu, so you have to install it from PyPi by executing `pip install PyQt6 nibabel` in the terminal. If it have this package in the future, feel free to install throgh `apt-get`
 
 Arch Linux/Manjaro Linux:
 
 ```shell
-sudo pacman -S python-numpy python-matplotlib python-openpyxl python-pyqt6
+sudo pacman -S python-numpy python-matplotlib python-openpyxl python-pyqt6 
 ```
+
+`python-nibabel` is not provided in official repo but in AUR, you can use AUR helper(I prefer `yay` but it all depends yourself.) to install or build it manually.  
 
 Fedora/RedHat/Cent OS:
 
@@ -47,7 +49,7 @@ Fedora/RedHat/Cent OS:
 sudo dnf install -y python3-numpy python3-openpyxl
 ```
 
-Unfortunately `matplotlib`, `openpyxl` and `pyqt6` are not provided in its repo, so please manually install them by executing `pip install matplotlib openpyxl pyqt6`.
+Unfortunately `matplotlib`, `openpyxl` and `pyqt6` `nibabel` are not provided in its repo, so please manually install them by executing `pip install matplotlib openpyxl pyqt6 nibabel`.
 
 Mac OS X:
 
@@ -55,7 +57,7 @@ Mac OS X:
 brew install numpy pyqt
 ```
 
-Unfortunately, `matplotlib` and `openpyxl` are not included in brew Formula, so you have to install them manually through `pip install matplotlib openpyxl`.
+Unfortunately, `matplotlib`, `nibabel` and `openpyxl` are not included in brew Formula, so you have to install them manually through `pip install matplotlib openpyxl nibabel`.
 
 NOTE: Please avoid as possible using `sudo` with `pip` as this option may add many files not managed by your system's package manager.
 
