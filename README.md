@@ -1,4 +1,4 @@
-# TYUTSummerCourseDesignScripts
+# fMRIDataProcessingScripts
 
 ## What is this?
 
