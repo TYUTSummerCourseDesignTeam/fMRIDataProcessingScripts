@@ -175,11 +175,11 @@ class Processor(QObject):
                                 self.logger.debug("解析文件 %s 成功，矩阵大小：(%d,%d)" %(file,matrix.shape[0],matrix.shape[1]))
                                 lines1=list()
                                 lines2=list()
-                                if file in results.sheetnames:
-                                    sheet=results[file]
-                                else:
-                                    sheet=results.active
+                                if results.sheetnames==["Sheet"]:
+                                    sheet=results.active 
                                     sheet.title=file
+                                else:
+                                    sheet=results.create_sheet(file)
                                 sheetmap={
                                     "A1":"x",
                                     "B1":"y",
