@@ -624,7 +624,7 @@ class ProcessInfoEditor(QDialog):
         self.target_edit=QLineEdit("0.6")
         self.target_edit.setToolTip("目标皮尔逊相关系数的绝对值")
         self.target_edit.setStyleSheet("QLineEdit{border:1px solid #F3EAC2;border-radius:5px;background:transparent;}QLineEdit:hover{border:1px solid #F5B461;}")
-        self.target_edit.setValidator(QDoubleValidator(0.0,1.0,0))
+        self.target_edit.setValidator(QDoubleValidator(0.0,1.0,20))
         target.addWidget(self.target_edit)
         content.addLayout(target,6,0)
         overnum=QHBoxLayout()
