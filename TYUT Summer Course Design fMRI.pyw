@@ -739,9 +739,11 @@ class ProcessInfoEditor(QDialog):
         self.logger.debug("获取到的文件信息：%s" %file)
     def browse_dicom(self):
         file=QFileDialog.getExistingDirectory(caption="选择DICOM文件夹",directory=os.path.split(os.path.realpath(__file__))[0])
-        if os.path.isdir(os.path.join(file,"FunRaw")) and os.path.isdir(os.path.join(file,"T1Raw")):
+        if os.path.isdir(os.path.join(file,"FunRaw")) and os.path.isdir(os.path.join(file,"T1Raw")) and file !="":
             self.dicom_edit.setText(file)
             self.logger.debug("获取到的文件夹信息：%s" %file)
+        elif file=="":
+            self.logger.debug("选择的DICOM文件夹路径为空")
         else:
             QMessageBox.critical(self,"错误","DICOM文件夹需要拥有FunRaw和T1Raw文件夹")        
     def save(self):
