@@ -13,7 +13,8 @@ In the processing of matrix data, with the increasing number of template nodes a
 1. Processing data matrix to realize data visualization. You can extract and filter the part above a certain value from the matrix, output a specific matrix image, and output the corresponding coordinates and names of the corresponding nodes to a specific table (this script is output to Excel).
 2. All object images are compared to output a specified matrix image with a certain number of repetitions as the standard.
 3. Import specified node coordinates, which can realize the original matrix data screening function, and output corresponding files (. Node and. Edge) according to Power264 matrix (or other matrix template which satisfy the correct format in the editor's tooltip), which can be directly imported into BrainNet for use.
-4. Most of the generated files are MATLAB compatible, you can use them in MATLAB directly, incompatible files are used for human reading directly, you can open them easily with Excel or any image viewer you like. In fact, we use this script to genrate files to plot in MATLAB, it will be too effectiveless if we do it manually.
+4. Extract patients' info from DICOM files to Excel.
+5. Most of the generated files are MATLAB compatible, you can use them in MATLAB directly, incompatible files are used for human reading directly, you can open them easily with Excel or any image viewer you like. In fact, we use this script to genrate files to plot in MATLAB, it will be too effectiveless if we do it manually.
 
 ## How to use it?
 
@@ -29,7 +30,7 @@ Ubuntu/Debian:
 
 ```shell
 
-sudo apt-get install -y python3-numpy python3-matplotlib python3-openpyxl 
+sudo apt-get install -y python3-numpy python3-matplotlib python3-openpyxl python3-pydicom 
 
 ```
 
@@ -41,12 +42,12 @@ Arch Linux/Manjaro Linux:
 sudo pacman -S python-numpy python-matplotlib python-openpyxl python-pyqt6 
 ```
 
-`python-nibabel` is not provided in official repo but in AUR, you can use AUR helper(I prefer `yay` but it all depends yourself.) to install or build it manually.  
+`python-nibabel` and `python-pydicom` are not provided in official repo but in AUR, you can use AUR helper(I prefer `yay` but it all depends yourself.) to install or build it manually.  
 
 Fedora/RedHat/Cent OS:
 
 ```shell
-sudo dnf install -y python3-numpy python3-openpyxl
+sudo dnf install -y python3-numpy python3-openpyxl python3-pydicom 
 ```
 
 Unfortunately `matplotlib`, `openpyxl` and `pyqt6` `nibabel` are not provided in its repo, so please manually install them by executing `pip install matplotlib openpyxl pyqt6 nibabel`.
@@ -57,7 +58,7 @@ Mac OS X:
 brew install numpy pyqt
 ```
 
-Unfortunately, `matplotlib`, `nibabel` and `openpyxl` are not included in brew Formula, so you have to install them manually through `pip install matplotlib openpyxl nibabel`.
+Unfortunately, `matplotlib`, `nibabel`, `pydicom` and `openpyxl` are not included in brew Formula, so you have to install them manually through `pip install matplotlib openpyxl nibabel`.
 
 NOTE: Please avoid as possible using `sudo` with `pip` as this option may add many files not managed by your system's package manager.
 

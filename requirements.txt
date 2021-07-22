@@ -3,3 +3,4 @@ openpyxl>=3.0.7
 matplotlib>=3.4.2
 PyQt6>=6.1.1
 nibabel>=3.2.1
+pydicom>=2.1.2

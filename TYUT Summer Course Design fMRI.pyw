@@ -9,6 +9,8 @@ import nibabel
 import logging
 import openpyxl
 import platform
+from pydicom.dataset import Dataset
+from pydicom.filereader import dcmread
 from matplotlib import pyplot as plt
 from matplotlib import use as matuse
 from nibabel.affines import apply_affine
@@ -16,7 +18,7 @@ from openpyxl.styles import Alignment
 from openpyxl.utils.exceptions import InvalidFileException
 from PyQt6.QtCore import QObject, QRegularExpression, QThread, pyqtBoundSignal, pyqtSignal, Qt, pyqtSlot
 from PyQt6.QtGui import QCursor, QDoubleValidator, QIcon, QMouseEvent, QPixmap, QRegularExpressionValidator
-from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QPlainTextEdit, QProgressBar, QPushButton, QSystemTrayIcon, QVBoxLayout,QWidget
+from PyQt6.QtWidgets import QApplication, QCheckBox, QComboBox, QDialog, QFileDialog, QGridLayout, QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMessageBox, QPlainTextEdit, QProgressBar, QPushButton, QSystemTrayIcon, QVBoxLayout,QWidget
 
 os.chdir(os.path.split(os.path.realpath(__file__))[0])
 # 更改工作目录到脚本文件夹，使相对路径均以脚本文件夹为基准
@@ -88,6 +90,37 @@ class Processor(QObject):
                     self.logger.warning("公共部分矩阵在(%d,%d)似乎出现了非0初始化值 %d？" %(index[0],index[1],value))
                 common[index]=count
         return common
+    def handle_ds(self,ds:Dataset):
+        '''
+        功能:从DICOM文件中获取患者信息
+        参数:ds:Dataset:pydicom打开文件后获得的数据集
+        返回值:文件名、患者ID、患者姓名、患者生日、患者年龄、患者性别、患者身高、患者体重组成的列表以及除文件名以外的元素组成的列表；两个列表按顺序以元组形式返回
+        注意:具体可以获取的内容取决于文件自身储存的信息，可以获取的项目名称需要使用相应程序（Photoshop 2021等）打开DICOM文件后在元数据处查看
+        '''
+        sexMap={"F":"女","M":"男"}
+        funpath=str(ds.filename)
+        patientId=str(ds.get("PatientID"))
+        patientName=str(ds.get("PatientName"))
+        patientBirthDate=str(ds.get("PatientBirthDate"))
+        patientAge=str(ds.get("PatientAge"))
+        patientSex=str(ds.get("PatientSex"))
+        patientSize=str(ds.get("PatientSize"))
+        patientWeight=str(ds.get("PatientWeight"))
+        data=[funpath,patientId,patientName,patientBirthDate,patientAge,patientSex,patientSize,patientWeight]
+        datab=data.copy()
+        datab.remove(funpath)
+        datab[1]=datab[1].title()
+        # 格式化人名为单词首字母大写的形式
+        datab[2]=time.strftime("%Y-%m-%d",time.strptime(datab[2],"%Y%m%d"))
+        # 格式化时间为年-月-日的形式
+        datab[3]="%d" %int(datab[3].replace("Y",""))
+        # 格式化年龄为正常整数
+        datab[4]=sexMap[datab[4]]
+        # 格式化性别为正常名称
+        if datab[5]=="None":
+            datab[5]="无数据"
+        # 标注无身高数据的项目
+        return data,datab
     def main(self):
         start_time=time.time()
         self.update_progress_signal.emit(0)
@@ -299,6 +332,54 @@ class Processor(QObject):
                             niisheet.append(chatdata)
                             r+=1
                         niiwb.save(os.path.join(workdir,"Results","nii_values.xlsx"))
+                    if self.config["dicom_enabled"]==True:
+                        self.logger.info("正在从DICOM文件夹中提取患者信息")
+                        wb=openpyxl.Workbook()
+                        fr=wb.active
+                        fr.title="FunRawResult"
+                        tr=wb.create_sheet("T1RawResult")
+                        # 最后去重的结果按文件夹放到这两张表
+                        fs=wb.create_sheet("FunRaw")
+                        ts=wb.create_sheet("T1Raw")
+                        # 每个文件夹内的每一张图像获取到的原始数据
+                        fs.append(["文件路径","患者ID","患者姓名","患者生日","患者年龄","患者性别","患者身高","患者体重"])
+                        ts.append(["文件路径","患者ID","患者姓名","患者生日","患者年龄","患者性别","患者身高","患者体重"])
+                        fr.append(["患者ID","患者姓名","患者生日","患者年龄","患者性别","患者身高","患者体重"])
+                        tr.append(["患者ID","患者姓名","患者生日","患者年龄","患者性别","患者身高","患者体重"])
+                        ffailed=0
+                        fold=[]
+                        tfailed=0
+                        told=[]
+                        for root,dirs,fnames in os.walk(os.path.join(self.config["dicom_path"],"FunRaw")):
+                            for fname in fnames:
+                                try:
+                                    ds=dcmread(os.path.join(root,fname))
+                                except:
+                                    self.logger.error("文件 %s 读取失败，将跳过" %os.path.join(root,fname))
+                                    ffailed+=1
+                                else:
+                                    self.logger.debug("加载文件 %s 成功" %os.path.join(root,fname))
+                                    data,datab=self.handle_ds(ds)
+                                    if datab!=fold:
+                                        fold=datab
+                                        fr.append(datab)
+                                    fs.append(data)
+                        for root,dirs,fnames in os.walk(os.path.join(self.config["dicom_path"],"T1Raw")):
+                            for fname in fnames:
+                                try:
+                                    ds=dcmread(os.path.join(root,fname))
+                                except:
+                                    self.logger.error("文件 %s 读取失败，将跳过" %os.path.join(root,fname))
+                                    tfailed+=1
+                                else:
+                                    self.logger.debug("加载文件 %s 成功" %os.path.join(root,fname))
+                                    data,datab=self.handle_ds(ds)
+                                    if datab!=told:
+                                        told=datab
+                                        tr.append(datab)
+                                    ts.append(data)
+                        wb.save(os.path.join(workdir,"Results","info.xlsx"))
+                        self.logger.info("信息提取完成，FunRaw文件夹失败文件数：%d，T1Raw文件夹失败文件数：%d" %(ffailed,tfailed))
                     mins,secs=divmod(time.time()-start_time,60)
                     hrs,mins=divmod(mins,60)
                     self.logger.info("所有任务执行完成，共计用时 %02d:%02d:%02d" %(hrs,mins,secs))
@@ -586,10 +667,25 @@ class ProcessInfoEditor(QDialog):
         nii_path_btn.clicked.connect(self.browse_nii)
         nii_path.addWidget(nii_path_btn)
         content.addLayout(nii_path,8,0)
+        dicom=QHBoxLayout()
+        dicom_label=QLabel("DICOM文件夹：")
+        dicom_label.setStyleSheet("QLabel{background:transparent;border:none;}")
+        dicom.addWidget(dicom_label)
+        self.dicom_edit=QLineEdit()
+        self.dicom_edit.setToolTip("用于提取用户信息的DICOM文件夹的位置，即含有FunRaw和T1Raw的那个文件夹，留空则禁用提取用户信息的功能")
+        self.dicom_edit.setStyleSheet("QLineEdit{border:1px solid #F3EAC2;border-radius:5px;background:transparent;}QLineEdit:hover{border:1px solid #F5B461;}")
+        dicom.addWidget(self.dicom_edit)
+        dicom_btn=QPushButton("浏览")
+        dicom_btn.setToolTip("浏览文件")
+        dicom_btn.setFixedSize(40,20)
+        dicom_btn.setStyleSheet("QPushButton{background:#9BE3DE;border:none;border-radius:5px}QPushButton:hover{background:#9AD3BC;}")
+        dicom_btn.clicked.connect(self.browse_dicom)
+        dicom.addWidget(dicom_btn)
+        content.addLayout(dicom,9,0)
         self.apply=QCheckBox("保存并应用")
         self.apply.setToolTip("保存的同时应用这个处理信息文件到脚本配置")
         self.apply.setStyleSheet("QCheckBox::indicator{width:10px;height:10px;border:none;border-radius:5px;background:#9BE3DE;}QCheckBox::indicator:unchecked{background:#BEEBE9;}QCheckBox::indicator:unchecked:hover{background:#9AD3BC;}QCheckBox::indicator:checked{background:#95E1D3;}QCheckBox::indicator:checked:hover{background:#98DED9;}")
-        content.addWidget(self.apply,8,1)
+        content.addWidget(self.apply,9,1)
         save=QPushButton("保存(&S)")
         save.setToolTip("保存当前配置")
         save.setFixedHeight(20)
@@ -620,6 +716,7 @@ class ProcessInfoEditor(QDialog):
                     self.overnum_edit.setText(str(conf["overnum"]))
                     self.selected_node_path_edit.setText(conf["selected_nodepath"])
                     self.nii_path_edit.setText(conf["nii_path"])
+                    self.dicom_edit.setText(conf["dicom_path"])
                 except Exception as e:
                     self.logger.debug("出错原因：%s" %e)
                     self.logger.warning("文件中存在错误，我们已经将错误部分恢复为默认值")
@@ -640,6 +737,13 @@ class ProcessInfoEditor(QDialog):
         file,_=QFileDialog.getOpenFileName(caption="选择.nii数据文件",directory=os.path.split(os.path.realpath(__file__))[0],filter="数据文件(*.nii *.nii.gz)")
         self.nii_path_edit.setText(file)
         self.logger.debug("获取到的文件信息：%s" %file)
+    def browse_dicom(self):
+        file=QFileDialog.getExistingDirectory(caption="选择DICOM文件夹",directory=os.path.split(os.path.realpath(__file__))[0])
+        if os.path.isdir(os.path.join(file,"FunRaw")) and os.path.isdir(os.path.join(file,"T1Raw")):
+            self.dicom_edit.setText(file)
+            self.logger.debug("获取到的文件夹信息：%s" %file)
+        else:
+            QMessageBox.critical(self,"错误","DICOM文件夹需要拥有FunRaw和T1Raw文件夹")        
     def save(self):
         conf={
             "add_label":self.add_label_combo.currentData(),
@@ -654,7 +758,9 @@ class ProcessInfoEditor(QDialog):
             "selected_nodepath":self.selected_node_path_edit.text(),
             "selected_node_enabled":bool(self.selected_node_path_edit.text()),
             "nii_path":self.nii_path_edit.text(),
-            "nii_enabled":bool(self.nii_path_edit.text())
+            "nii_enabled":bool(self.nii_path_edit.text()),
+            "dicom_path":self.dicom_edit.text(),
+            "dicom_enabled":bool(self.dicom_edit.text())
         }
         if self.open_exists_edit.text()!="" and os.path.isfile(self.open_exists_edit.text()):
             path=self.open_exists_edit.text()
@@ -880,6 +986,7 @@ class UI(QMainWindow):
         with open("config.json","w",encoding="utf-8") as p:
             p.write(json.dumps(config,ensure_ascii=False,indent=4,sort_keys=True))
         self.tray.setVisible(False)
+        self.tray.hide()
         return super().close()
     @pyqtSlot()
     def showMinimized(self) -> None:
