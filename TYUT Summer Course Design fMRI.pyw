@@ -208,29 +208,34 @@ class Processor(QObject):
                                         r=self.config["node_start"]
                                         rdata={"A":index[0]+1,"B":index[1]+1,"C":value}
                                         for row in nodes.iter_rows(min_row=self.config["node_start"]):
-                                            node_name="-"
                                             node_num=list(row)[0].value
                                             if nodes.cell(row=r,column=5).value!=None and self.config["add_label"]=="E":
                                                 node_name=str(nodes.cell(row=r,column=5).value)
                                             elif nodes.cell(row=r,column=6).value!=None and self.config["add_label"]=="C":
                                                 node_name=str(nodes.cell(row=r,column=6).value)
+                                            else:
+                                                node_name="-"
                                             if node_num!=None and int(node_num)==int(rdata["A"]):
+                                                node_score="1.000000"
+                                                node_size="1"
                                                 rdata["D"]=nodes.cell(row=r,column=2).value
                                                 rdata["E"]=nodes.cell(row=r,column=3).value
                                                 rdata["F"]=nodes.cell(row=r,column=4).value
                                                 rdata["G"]=nodes.cell(row=r,column=5).value
                                                 rdata["H"]=nodes.cell(row=r,column=6).value
-                                                line1=self.config["split"].join([str(rdata["D"]),str(rdata["E"]),str(rdata["F"])])+self.config["split"]+"1"+self.config["split"]+"1.000000"+self.config["split"]+node_name+self.config["newline"]
+                                                line1=self.config["split"].join([str(rdata["D"]),str(rdata["E"]),str(rdata["F"]),node_size,node_score,node_name])+self.config["newline"]
                                                 lines1.append(line1)
                                                 if line1 not in nodesmap.keys():
                                                     nodesmap[line1]=nodes.cell(row=r,column=1).value
                                             if node_num!=None and int(node_num)==int(rdata["B"]):
+                                                node_score="1.000000"
+                                                node_size="1"
                                                 rdata["I"]=nodes.cell(row=r,column=2).value
                                                 rdata["J"]=nodes.cell(row=r,column=3).value
                                                 rdata["K"]=nodes.cell(row=r,column=4).value
                                                 rdata["L"]=nodes.cell(row=r,column=5).value
                                                 rdata["M"]=nodes.cell(row=r,column=6).value
-                                                line2=self.config["split"].join([str(rdata["I"]),str(rdata["J"]),str(rdata["K"])])+self.config["split"]+"1"+self.config["split"]+"1.000000"+self.config["split"]+node_name+self.config["newline"]
+                                                line2=self.config["split"].join([str(rdata["I"]),str(rdata["J"]),str(rdata["K"]),node_size,node_score,node_name])+self.config["newline"]
                                                 lines2.append(line2)
                                                 if line2 not in nodesmap.keys():
                                                     nodesmap[line2]=nodes.cell(row=r,column=1).value
